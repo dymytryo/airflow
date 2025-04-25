@@ -15,14 +15,7 @@ This repository contains several Airflow DAG projects maintained by the Analytic
 
 4. **DBT Drop Redshift View or Table DAG**  
    A manual-triggered DAG that drops specified Redshift tables or views via runtime config, allowing analytics engineers to manage schema cleanup without needing direct console access.
-
-## Getting Started
-
-1. Clone the repo.  
-2. Configure Airflow Variables for each project (see individual README files).  
-3. Deploy the DAG folders under your Airflow `dags/` directory.  
-4. Trigger or schedule each DAG as documented.
-
+   
 ## Directory Structure
 
 ```text
