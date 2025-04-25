@@ -51,7 +51,7 @@ The AWS Cloud Development Kit (CDK) is an open-source software development frame
 {
   "app": "npx ts-node bin/your-cdk-app.ts",
   "context": {
-    "mwaa-edwh-dbt-2.4.3": {
+    "mwaa-dbt-2.4.3": {
       "airflow_version": "2.4.3",
       "airflow_iam_policy_name": "AmazonMWAAManagedPolicyDWHDBT",
       "airflow_iam_role_name": "AmazonMWAA-DataPlatform-Airflow-dwh-dbt",
