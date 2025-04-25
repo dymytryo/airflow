@@ -76,7 +76,7 @@ The AWS Cloud Development Kit (CDK) is an open-source software development frame
     }
   }
 }
-
+```
 ---
 ## How CDK Works with MWAA  
 1. **Context in `cdk.json`**  -> this is going to be an MR that is submitted to the repository to ensure version control 
