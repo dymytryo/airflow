@@ -16,7 +16,7 @@ def load_conf(conf_key, bucket_name):
 
 if os.getenv('ENVIRONMENT') == 'dev':
     # Load config from local file system if in development
-    conf_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'conf', 'datalake_dags.json')
+    conf_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'conf', 'lake_dags.json')
     with open(conf_path, 'r') as file:
         conf = json.load(file)
 else:
