@@ -32,19 +32,15 @@ This repository contains several Airflow DAG projects maintained by the Analytic
 │   └── README.md
 ├── payment_pacing/
 │   └── payment_pacing_dag.py
-│   └── README_pacing.md
+│   └── README.md
 ├── dagrun_export/
 │   └── airflow_dagrun_export.py
-│   └── README_dagrun_export.md
+│   └── README.md
 ├── drop_redshift/
 │   └── dbt_drop_redshift.py
-│   └── README_drop_redshift.md
-└── README_repo.md        # ← This overview file
+│   └── README.md
+└── README.md        # ← This overview file
 ```
-
-## Contributing
-
-Feel free to open issues or pull requests for enhancements, bug fixes, or new DAG proposals.
 
 ## License
 
