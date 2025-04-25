@@ -13,7 +13,6 @@ A DAG that extracts Airflow `DagRun` metadata and writes it to Redshift so histo
 5. [Key Components](#key-components)
 6. [Usage](#usage)
 7. [Extensibility & Future Enhancements](#extensibility--future-enhancements)
-8. [Contact](#contact)
 
 ---
 
@@ -101,9 +100,3 @@ Constants:
 - Add additional metadata columns (e.g., task duration).  
 - Integrate with BI tools for SLA dashboards.  
 - Automate schema evolution on new Airflow versions.
-
----
-
-## Contact
-
-For questions or contributions, reach out to **DataOps Team** at dataops@example.com.
