@@ -89,7 +89,7 @@ In your Airflow `dags/` folder, include a Python file (`generate_stg_dags.py`) t
 4. Schedules it on the upstream `Dataset(outlet)`.  
 5. Defines a single `DWHOperator` task which runs:
    ```bash
-   dbt run --select stg__<table_name> --target prod &&    dbt retry --target prod
+   dbt run --select stg__<table_name> --target prod && dbt retry --target prod
    ```
 6. Publishes `Dataset(f"stg__{table_name}")` as the downstream output.
 
