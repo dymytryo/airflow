@@ -1,0 +1,24 @@
+[
+    {
+        "dag_name": "lake-info",
+        "outlets": [
+            "public.info",
+            "dataplatform.info"
+        ]
+    },
+    {
+        "dag_name": "datalake-action",
+        "outlets": [
+            "public.action",
+            "dataplatform.action"
+        ]
+    },
+    {
+        "dag_name": "datalake-card",
+        "outlets": [
+            "public.card",
+            "dataplatform.card"
+        ]
+    },
+  ...
+]
