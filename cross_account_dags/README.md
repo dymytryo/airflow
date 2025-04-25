@@ -13,7 +13,6 @@ A dynamic, configurable Airflow-based project that synchronizes data refreshes b
 5. [Key Components](#key-components)
 6. [Usage](#usage)
 7. [Extensibility & Future Enhancements](#extensibility--future-enhancements)
-8. [Contact](#contact)
 
 ---
 
@@ -127,8 +126,3 @@ By assigning each DAG into `globals()[dag_id]`, Airflow automatically discovers 
 - **Monitoring**: Integrate with DataDog or Prometheus for SLA monitoring.
 - **Visualization**: Add a summary dashboard of dataset latencies.
 
----
-
-## Contact
-
-For questions or contributions, contact **DataOps Team** at dataops@example.com.
