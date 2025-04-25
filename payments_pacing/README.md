@@ -14,7 +14,6 @@ A scheduled Airflow DAG that calculates and writes monthly payment volume projec
 6. [Key Components](#key-components)
 7. [Usage](#usage)
 8. [Extensibility & Future Enhancements](#extensibility--future-enhancements)
-9. [Contact](#contact)
 
 ---
 
@@ -138,9 +137,3 @@ Schedule and catchup:
 - **Alerting**: Add email or Slack notifications for anomalous pacing results.  
 - **Multi-Environment Support**: Separate Airflow Variables for dev, staging, and prod.  
 - **Dashboarding**: Enhance Tableau or build in Superset for richer visualizations.
-
----
-
-## Contact
-
-For questions or contributions, reach out to **DataOps Team** at dataops@example.com.
