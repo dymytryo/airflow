@@ -68,12 +68,12 @@ This enables real-time decision-making and automated reporting to leadership.
 
 ```mermaid
 flowchart LR
-    A[Schedule: 18:00 UTC Every Day] --> B[PythonOperator: calculate_pacing]
-    B --> C[_read_from_redshift(query)]
-    C --> D[_calculate_projections(df, payment_method)]
-    D --> E[_write_to_redshift(projections, table)]
-    E --> F[payment.pacing table updated]
-    F --> G[Tableau Dashboard refresh]
+    A["Schedule: 18:00 UTC Every Day"] --> B["calculate_pacing"]
+    B --> C["read_from_redshift"]
+    C --> D["calculate_projections"]
+    D --> E["write_to_redshift"]
+    E --> F["payment.pacing updated"]
+    F --> G["Tableau refresh"]
 ```
 
 1. **Trigger**: Cron at `0 18 * * *` (daily at 18:00 UTC).  
