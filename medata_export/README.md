@@ -42,10 +42,10 @@ The **Airflow DagRun Export** DAG runs daily to:
 
 ```mermaid
 flowchart LR
-    A[Schedule: 21:00 UTC Every Day] --> B[Task: export_and_write_dagrun_metadata]
-    B --> C[_export_dagrun_data()]
-    C --> D[_write_to_redshift(df, table_name)]
-    D --> E[elementary.airflow_dagrun_metadata updated]
+    A[Schedule at 21:00 UTC Every Day] --> B[export_and_write_dagrun_metadata task]
+    B --> C[export_dagrun_data function]
+    C --> D[write_to_redshift function]
+    D --> E[metadata table updated]
 ```
 
 1. **Trigger**: Cron at `0 21 * * *` (3 PM CST).  
