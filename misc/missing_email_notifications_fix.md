@@ -29,9 +29,49 @@
 - **No UI Permissions**: You don’t have rights to change Airflow config in the MWAA console.  
 - **Version Control**: All infra changes live in code and Git history—no hidden manual tweaks.
 
+## What Is CloudFormation?  
+AWS CloudFormation is Amazon’s Infrastructure-as-Code (IaC) service that lets you model, provision, and manage AWS resources using declarative templates. Instead of clicking around the console, you define your entire infrastructure—networks, compute, storage, permissions, and more—in a JSON or YAML file.
+
+- **Declarative IaC Service**  
+  You write JSON/YAML “templates” that describe the exact AWS resources you want (VPCs, EC2 instances, IAM roles, etc.).  
+- **Orchestration Engine**  
+  CloudFormation parses your template, figures out resource dependencies, and creates/updates/deletes resources in the correct order.  
+- **Runtime**  
+  Stacks are the live instantiations of your templates; change sets preview updates, and drift detection alerts you to manual changes outside of CloudFormation.
+   
+## Simple Example
+
+```yaml
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Example S3 bucket
+Resources:
+  MyBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: my-unique-bucket-123
+Outputs:
+  BucketName:
+    Description: The name of the S3 bucket
+    Value: !Ref MyBucket
+```
+
+## Deploy with CLI: 
+```
+aws cloudformation deploy \
+  --template-file template.yaml \
+  --stack-name my-s3-stack \
+  --capabilities CAPABILITY_NAMED_IAM
+```
+---
 ## What Is CDK?  
 The AWS Cloud Development Kit (CDK) is an open-source software development framework for defining cloud infrastructure as code (IaC). Instead of writing raw CloudFormation JSON/YAML, you use familiar programming languages to model and provision AWS resources.
 
+- **Imperative Programming Model**  
+  Instead of writing raw JSON/YAML, you write code in TypeScript, Python, Java, C#, or Go.  
+- **Constructs**  
+  CDK provides reusable classes (“constructs”) that encapsulate common AWS patterns (e.g. an S3 bucket with encryption enabled, a VPC with public/private subnets, an MWAA environment).  
+- **Synthesis**  
+  When you run `cdk synth`, the CDK framework **generates** a CloudFormation template under the hood—translating your code and constructs into declarative resources.
 ---
 
 ## Key Concepts
