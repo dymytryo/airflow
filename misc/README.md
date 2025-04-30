@@ -53,11 +53,10 @@ wait_for_sources = wait_for_sources_dag()
 The actual DAG  is going to look like this: 
 ```mermaid
 flowchart TB
-flowchart TB
-  start[Start] --> wait_group
-  wait_group --> continue_pipeline[Continue Pipeline]
+  start["Start"] --> wait_for_source_tables
+  wait_for_source_tables["Wait for Source Tables"] --> continue_pipeline["Continue Pipeline"]
 
-  subgraph wait_group["Wait for Source Tables"]
+  subgraph wait_for_source_tables ["Wait for Source Tables"]
     direction TB
     wait_for_payments_dag["wait_for_payments_dag"]
     wait_for_settlements_dag["wait_for_settlements_dag"]
