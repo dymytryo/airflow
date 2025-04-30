@@ -52,3 +52,17 @@ def wait_for_sources_dag():
 wait_for_sources = wait_for_sources_dag()
 
 ```
+```mermaid
+flowchart TB
+  %% Top-level tasks
+  start[Start] --> wait_group
+  wait_group --> continue_pipeline[Continue Pipeline]
+
+  %% TaskGroup
+  subgraph wait_group["Wait for Source Tables"]
+    direction TB
+    wait_for_payments_daily_dag["wait_for_payments_daily_dag"]
+    %% add more sensors here, e.g.:
+    %% wait_for_orders_daily_dag["wait_for_orders_daily_dag"]
+  end
+```
