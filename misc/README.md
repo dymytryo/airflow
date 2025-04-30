@@ -12,9 +12,8 @@ from datetime import datetime
 
 # Map each upstream source table to its corresponding DAG name
 source_table_to_dag_map = {
-    'payments_daily': 'payments_daily',
-    # add more mappings here:
-    # 'orders_daily': 'orders_daily',
+    'payments':   'payments',
+    'settlements': 'settlements',
 }
 
 @dag(
@@ -50,19 +49,17 @@ def wait_for_sources_dag():
     start >> wait_for_sources_group >> downstream
 
 wait_for_sources = wait_for_sources_dag()
-
 ```
+The actual DAG  is going to look like this: 
 ```mermaid
 flowchart TB
-  %% Top-level tasks
+flowchart TB
   start[Start] --> wait_group
   wait_group --> continue_pipeline[Continue Pipeline]
 
-  %% TaskGroup
   subgraph wait_group["Wait for Source Tables"]
     direction TB
-    wait_for_payments_daily_dag["wait_for_payments_daily_dag"]
-    %% add more sensors here, e.g.:
-    %% wait_for_orders_daily_dag["wait_for_orders_daily_dag"]
+    wait_for_payments_dag["wait_for_payments_dag"]
+    wait_for_settlements_dag["wait_for_settlements_dag"]
   end
 ```
