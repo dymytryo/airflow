@@ -14,7 +14,6 @@ A manual-triggered Airflow DAG that drops specified Redshift tables or views bas
 6. [Key Components](#key-components)
 7. [Usage](#usage)
 8. [Extensibility & Future Enhancements](#extensibility--future-enhancements)
-9. [Contact](#contact)
 
 ---
 
@@ -126,9 +125,3 @@ Pass a JSON object when triggering:
 - **Role Enforcement**: Validate permissions before drop.  
 - **Wildcard Support**: Allow schema-wide drops with patterns.  
 - **Audit Table**: Record drop history in Redshift for lineage.
-
----
-
-## Contact
-
-For questions or contributions, reach out to **DataOps Team** at dataops@example.com.
