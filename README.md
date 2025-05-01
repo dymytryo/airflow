@@ -41,3 +41,61 @@ This repository contains several Airflow DAG projects maintained by the Analytic
 ## License
 
 This code is licensed under the MIT License. See [LICENSE](LICENSE) for details.
+
+```mermaid
+
+flowchart TD
+  %% Base tables → support_contacts
+  cx_assisted_support_contacts["ref('cx_assisted_support_contacts')"] --> support_contacts
+  cxo_assisted_ces_survey_enterprise_enriched["ref('cxo_assisted_ces_survey_enterprise_enriched')"] --> support_contacts
+  cxo_assisted_ces_themes["ref('cxo_assisted_ces_themes')"] --> support_contacts
+
+  %% Base tables → contacts_handled
+  cxo_assisted_support_handled_contacts_events["ref('cxo_assisted_support_handled_contacts_events')"] --> contacts_handled
+  support_contacts --> contacts_handled
+
+  %% Metrics sourced directly from support_contacts
+  support_contacts --> ces_response_count
+  support_contacts --> effort_score
+  support_contacts --> effort_score_onestars
+  support_contacts --> effort_score_fivestars
+  support_contacts --> resolution_rate
+  support_contacts --> advocate_sat
+  support_contacts --> ces_feedback
+  support_contacts --> feedback_sentiment
+  support_contacts --> base_themes
+  support_contacts --> offered_volume
+
+  %% Metrics sourced from contacts_handled
+  contacts_handled --> handled_volume
+  contacts_handled --> fcr_rate
+  contacts_handled --> asa_secs
+  contacts_handled --> system_asa_secs
+  contacts_handled --> talk_time_secs
+  contacts_handled --> hold_time_secs
+  contacts_handled --> work_time_secs
+  contacts_handled --> total_handle_time_secs
+
+  %% All metrics → combined_metrics
+  ces_response_count --> combined_metrics
+  effort_score --> combined_metrics
+  effort_score_onestars --> combined_metrics
+  effort_score_fivestars --> combined_metrics
+  resolution_rate --> combined_metrics
+  advocate_sat --> combined_metrics
+  ces_feedback --> combined_metrics
+  feedback_sentiment --> combined_metrics
+  base_themes --> combined_metrics
+  handled_volume --> combined_metrics
+  offered_volume --> combined_metrics
+  fcr_rate --> combined_metrics
+  asa_secs --> combined_metrics
+  system_asa_secs --> combined_metrics
+  talk_time_secs --> combined_metrics
+  hold_time_secs --> combined_metrics
+  work_time_secs --> combined_metrics
+  total_handle_time_secs --> combined_metrics
+
+  %% Final select
+  combined_metrics --> final_output["SELECT * FROM combined_metrics"]
+```
