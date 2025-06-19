@@ -27,7 +27,7 @@ curl -X POST -H 'Content-type: application/json' --data '{"text":"Dmytro testing
 | `Connection Type ` | `HTTP` |
 | `Host` | `https://hooks.slack.com/services/`|
 | `Password` | `TXXXXX/FDJSXXXXXX/sdfdXXXXXXXXXX` |
-| `Extra` | ```{
+| `Extra` | `{
   "proxy": "http://proxy.local:3128"
-}``` |
+}` |
 
