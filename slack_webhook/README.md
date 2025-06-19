@@ -9,9 +9,9 @@
 
 | Webhook URL                            | Channel            | Added By         | Date Added    |
 |-----------------------------------------|--------------------|------------------|--------------|
-| `https://hooks.slack.com/services/T05GHOSFDL/GDG545GD485765DG/stdG77gd7Esgdg54gdf`  | #dbt-alerts   | Dmytro Valiaiev  | Jun 19, 2025 |
+| `https://hooks.slack.com/services/TXXXXX/FDJSXXXXXX/sdfdXXXXXXXXXX`  | #dbt-alerts   | Dmytro Valiaiev  | Jun 19, 2025 |
 
 7. Test it with a command in local terminal: 
 ```shell
-curl -X POST -H 'Content-type: application/json' --data '{"text":"Dmytro testing!"}' https://hooks.slack.com/services/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
+curl -X POST -H 'Content-type: application/json' --data '{"text":"Dmytro testing!"}' https://hooks.slack.com/services/TXXXXX/FDJSXXXXXX/sdfdXXXXXXXXXX
 ```
