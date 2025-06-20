@@ -24,7 +24,7 @@ flowchart TD
     B{on_failure_callback triggered}
     C1[Send alert to Slack Channel 1]
     C2[Send alert to Slack Channel 2]
-    D[Email alert sent (if configured)]
+    D[Email alert sent]
     E[Alert seen by Data Team]
     A --> B
     B --> C1
