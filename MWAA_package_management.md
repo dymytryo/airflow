@@ -309,3 +309,102 @@ with open("constraints.txt", "w") as f:
 
 print(constraints_txt)   # or just return / print as needed
 ```
+
+---
+`Python` installation 
+Now, install the exact Python version that MWAA is running on: 
+```
+brew install pyenv                 # one-time
+```
+```
+pyenv install 3.11.7               # exact patch
+```
+Enable `pyenv` for `zsh`:
+```
+# Add pyenv to PATH
+echo 'export PYENV_ROOT="$HOME/.pyenv"'        >> ~/.zprofile
+echo 'export PATH="$PYENV_ROOT/bin:$PATH"'     >> ~/.zprofile
+
+# Initialise pyenv at boot
+echo 'eval "$(pyenv init --path)"'             >> ~/.zprofile
+echo 'eval "$(pyenv init -)"'                  >> ~/.zshrc
+```
+Reload the shell:
+```
+exec "$SHELL"
+```
+Call the shell to use the exact version that we installed:
+```
+pyenv shell 3.11.7
+```
+Double-check the version:
+```
+python --version
+```
+This should return `Python 3.11.7`
+Get the virtual environment and activate it: 
+```
+python -m venv .mwaa 
+source .mwaa/bin/activate
+```
+Turn off the virtual environment
+```
+deactivate 
+```
+Return the shell to the default Python
+```
+pyenv shell --unset 
+```
+
+# Running actual deps
+
+Trying out to run new package (`trino` and its Airflow connector in this case)
+`-c` is short for constraints
+`--dry-run` does everything except installation
+```
+pip install --dry-run -c constraints.txt trino apache-airflow-providers-trino
+```
+Now, we need to create `requirements.txt.`:
+```
+If it runs successfully, then actually install packages:
+```
+pip install -c constraints.txt trino apache-airflow-providers-trino
+```
+Check everything:
+```
+pip check 
+```
+This should return `No broken requirements found.`
+Then just run `pip show`:
+```
+(.mwaa) ~ % pip show trino apache-airflow-providers-trino
+Name: trino
+Version: 0.335.0
+Summary: Client for the Trino distributed SQL Engine
+Home-page: https://github.com/trinodb/trino-python-client
+Author: Trino Team
+Author-email: python-client@trino.io
+License: Apache 2.0
+...
+---
+Name: apache-airflow-providers-trino
+Version: 5.8.1
+Summary: Provider package apache-airflow-providers-trino for Apache Airflow
+Home-page: 
+Author: 
+Author-email: Apache Software Foundation <dev@airflow.apache.org>
+License: 
+...
+```
+
+Additionally, you can verify the installation with `Python`:
+```
+python - <<'PY'
+import trino, airflow, pkg_resources as pr
+print("trino :", trino.__version__)
+print("provider:", pr.get_distribution("apache-airflow-providers-trino").version)
+print("airflow:", airflow.__version__)
+PY
+```
+
+
