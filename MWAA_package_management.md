@@ -265,3 +265,47 @@ This will give you:
 [2025-07-31, 20:55:12 UTC] {{logging_mixin.py:188}} INFO - yarl==1.9.4
 [2025-07-31, 20:55:12 UTC] {{logging_mixin.py:188}} INFO - zipp==3.17.0
 ```
+---
+# Extract constraints
+```python
+import re
+
+def extract_constraints(log_text: str) -> str:
+    """
+    Parse an Airflow/MWAA log dump and return a constraints-style list
+    (sorted alphabetically, one “package==version” per line).
+
+    Parameters
+    ----------
+    log_text : str
+        The multiline log string that contains lines like
+        “… INFO - pandas==2.1.4”.
+
+    Returns
+    -------
+    str
+        The frozen constraints list ready to write to constraints.txt.
+    """
+    pattern = re.compile(r"\b([A-Za-z0-9._-]+)==([0-9A-Za-z.+-]+)\b")
+    seen: dict[str, str] = {}
+
+    for pkg, ver in pattern.findall(log_text):
+        seen[pkg.lower()] = ver        # later occurrences win
+
+    return "\n".join(f"{pkg}=={seen[pkg]}" for pkg in sorted(seen))
+
+
+# ---- example usage ---------------------------------------------------------
+log_string = """[2025-07-31, 20:55:12 UTC] {{logging_mixin.py:188}} INFO - aiobotocore==2.9.0
+[2025-07-31, 20:55:12 UTC] {{logging_mixin.py:188}} INFO - aiohttp==3.9.1
+[2025-07-31, 20:55:12 UTC] {{logging_mixin.py:188}} INFO - aioitertools==0.11.0
+...
+"""
+
+constraints_txt = extract_constraints(log_string)
+
+with open("constraints.txt", "w") as f:
+    f.write(constraints_txt)
+
+print(constraints_txt)   # or just return / print as needed
+```
