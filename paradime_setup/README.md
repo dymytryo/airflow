@@ -78,7 +78,7 @@ Follow the [aws-mwaa-local-runner](https://github.com/aws/aws-mwaa-local-runner)
 
 ### 2.1 Clone the Repo
 ```bash
-git clone https://github.com/aws/aws-mwaa-local-runner.git
+git clone --branch v2.8.1 https://github.com/aws/aws-mwaa-local-runner.git
 cd aws-mwaa-local-runner
 ```
 
