@@ -15,6 +15,9 @@ This repository contains several Airflow DAG projects maintained by the Analytic
 
 4. **DBT Drop Redshift View or Table DAG**  
    A manual-triggered DAG that drops specified Redshift tables or views via runtime config, allowing analytics engineers to manage schema cleanup without needing direct console access.
+
+5. **Self-Healing Critical Pipelines**  
+   Closed-loop reliability for critical dbt models: a lineage builder maintains a control table of staleness and priority, and an hourly healer rebuilds only stale P0/P1 models with guardrails (per-cycle cap, dry run, blocked-by-source detection, auditable state table) and traffic-light Slack alerts. See [`self_healing_pipelines/`](self_healing_pipelines/).
    
 ## Directory Structure
 
