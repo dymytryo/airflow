@@ -1,0 +1,18 @@
+flowchart TD
+    A["Airflow scheduler"] --> B["dbt DAG task"]
+    B --> C["MwaaDbtContainerOperator"]
+    C --> D{"Runtime environment"}
+    D -->|"dev"| E["DockerOperator"]
+    D -->|"preprod/prod"| F["ECSRunTaskOperator"]
+    E --> G["dbt project container"]
+    F --> G
+    G --> H["dbt command"]
+    H --> I["Redshift / Starburst / warehouse target"]
+
+    C --> J["Runtime config"]
+    J --> K["S3 network config"]
+    J --> L["Airflow params / dag_run.conf"]
+
+    M["Debug DAGs"] --> N["AWS Secrets Manager keys"]
+    M --> O["Container filesystem"]
+    M --> P["Starburst connectivity"]

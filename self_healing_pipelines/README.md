@@ -75,6 +75,6 @@ Trigger with conf to override defaults:
 Shared helpers referenced by both (Starburst client, Slack alert operator,
 DAG factory, container operator) live in the platform's shared utilities
 package; a public container-operator implementation is in
-[airflow-mwaa-dbt-utilities](https://github.com/dymytryo/airflow-mwaa-dbt-utilities),
+[`mwaa_dbt_utilities/`](../mwaa_dbt_utilities/),
 and the DAG factory is documented in the
 [docker repo walkthrough](https://github.com/dymytryo/docker/blob/main/docs/dag-factory.md).
