@@ -18,6 +18,9 @@ This repository contains several Airflow DAG projects maintained by the Analytic
 
 5. **Self-Healing Critical Pipelines**  
    Closed-loop reliability for critical dbt models: a lineage builder maintains a control table of staleness and priority, and an hourly healer rebuilds only stale P0/P1 models with guardrails (per-cycle cap, dry run, blocked-by-source detection, auditable state table) and traffic-light Slack alerts. See [`self_healing_pipelines/`](self_healing_pipelines/).
+
+6. **Monitoring Upstream Airflow Pipelines**  
+   Options for a downstream consumer who depends on Airflow pipelines owned by another team: Iceberg snapshot metadata checks, producer-published completion watermarks, REST API polling, DagRun export, cross-instance notification, and OpenLineage, with a config-driven registry design and the trade-offs of each. See [`upstream_monitoring/`](upstream_monitoring/).
    
 ## Directory Structure
 
