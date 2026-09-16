@@ -30,6 +30,7 @@ use the job plane for triage.
 | **Contract** | Ask the producers to publish a completion watermark table, one row per application per business date | Yes, small |
 | **Triage** | Read-only Airflow API credential, used when a check fails, not for alerting | Yes, near zero |
 | **Routing** | Zapier or Slack webhook delivers the message your checker produces | No |
+| **Ticketing** | Your checker raises its own Jira issue, deduplicated by a deterministic key and closed on recovery | No |
 | **Longer term** | OpenLineage collector covering their Spark, their Airflow, and your dbt | Yes, medium |
 | **Do not rely on** | Being added to their failure notifications as your monitor | n/a |
 
@@ -144,14 +145,68 @@ application DAG.
   `state` and a start-date window. The `~` wildcard in place of `dag_id` returns
   runs across all DAGs, which is what makes this scale to one poller for N
   applications.
-- If their Airflow is Amazon Managed Workflows for Apache Airflow (MWAA), you do
-  not need network access into their virtual private cloud. The
-  `mwaa:InvokeRestApi` identity and access management (IAM) permission reaches the
-  API directly, which makes this a clean, auditable, read-only grant.
+- If their Airflow is Amazon Managed Workflows for Apache Airflow (MWAA), the
+  `airflow:InvokeRestApi` identity and access management (IAM) permission reaches
+  the API through the AWS application programming interface (API), scoped to an
+  Airflow role such as `Viewer`. That makes it a clean, auditable, read-only
+  grant.
+
+**The constraint that decides the design.** From the MWAA documentation: while
+configuring a private webserver, `InvokeRestApi` cannot be invoked from outside
+of a virtual private cloud (VPC). Private webservers are the common enterprise
+setup, so establish this before evaluating any hosted tool. If the webserver is
+private, nothing running outside the VPC reaches it, no matter how capable.
+
+Both MWAA authentication paths begin with a Signature Version 4 (SigV4) signed
+AWS call, which matters for any tool that only speaks plain HTTP:
+
+| Path | Mechanism | Limits |
+|---|---|---|
+| `airflow:InvokeRestApi` | `invoke_rest_api` with AWS credentials | 10 second timeout, 6 MB response, about 10 transactions per second |
+| `airflow:CreateWebLoginToken` | Web login token (60 second life) exchanged for a session token (12 hour life), then `Authorization: Bearer` | Higher throughput |
+
+The second path is friendlier to an external tool, because after the bootstrap it
+is ordinary HTTPS with a bearer token. The bootstrap itself still needs AWS
+signing.
+
+### Driving the poll from an integration platform
+
+| | Zapier | Workato |
+|---|---|---|
+| Native Airflow app | None; build on generic webhook, schedule, and code steps | None; generic HTTP connector |
+| Private VPC access | No path | On-prem agent (OPA): outbound only on TCP 443, mutual TLS, no inbound firewall rules, and HTTP calls can route through it rather than from the vendor's addresses |
+| SigV4 | Achievable in a code step, which runs Node.js with npm packages on paid plans | Handled by the AWS connectors and custom connector authentication with token refresh |
+| Cadence | Minutes, plan dependent, jitters under load; 100 new items per poll after deduplication | Finer control through scheduled and polling triggers |
+
+If it has to be an integration platform, use Workato, and the reason is the
+on-prem agent rather than any feature of the connectors. Hand-rolling AWS request
+signing inside a Zap to watch another team's pipeline produces a monitor that
+nobody monitors.
 
 **Verdict:** excellent for triage and for trend reporting, weak as your only
 detector. It tells you nothing when a DAG was never scheduled, and it still does
 not tell you whether rows landed.
+
+---
+
+## Option 3b: Airflow metrics to Datadog or Grafana
+
+Airflow emits StatsD metrics natively, and the Datadog Agent consumes them
+through DogStatsD. The mapper promotes `dag_id` and `task_id` to tags, so a
+monitor can filter to one application.
+
+Two reasons this outranks polling when it is already in place:
+
+1. A monitor evaluates a **no-data** condition natively. That is the "the DAG
+   never ran" case, which polling handles badly and failure callbacks miss
+   entirely.
+2. It costs nothing to consume. If the platform team already ships these metrics,
+   the work is a dashboard and an alert rule.
+
+Coverage caveat: reported metrics vary by executor. `airflow.ti_failures` and
+`ti_successes`, `airflow.operator_failures` and `operator_successes`, and
+`airflow.dag.task.duration` are not reported under `KubernetesExecutor`. Confirm
+which executor the producing team runs before designing around a specific metric.
 
 ---
 
@@ -298,20 +353,82 @@ the conversation with the producing team factual rather than anecdotal.
 
 ---
 
+## Raising a ticket on the consumer side
+
+A consumer can raise its own Jira issue rather than waiting to be copied on the
+producing team's alert. This is usually the right move: it puts the work in your
+queue, with your priority and your service-level agreement (SLA), and it leaves a
+record that a chat notification does not.
+
+**Ticket from your own graded check, never from their alert.** Subscribing to
+their failure notifications and auto-ticketing them imports their noise, so a
+retry that self-heals in four minutes becomes an issue somebody has to close. The
+check you own already knows the difference between a blip and a breach.
+
+**Jira has no idempotent create.** The REST API will happily create the same
+issue twice, and integrations that call it per alert cycle produce one ticket per
+cycle. A twelve hour outage on an hourly check becomes twelve tickets. You have
+to build the deduplication yourself:
+
+1. Derive a deterministic key per condition, for example
+   `upstream-freshness-billing-invoices`. Put it in a label or a custom field.
+2. Search before creating. Query for an open issue carrying that key.
+3. If one exists, comment on it with the new observation instead of creating a
+   second. If none exists, create.
+4. On the FAIL to PASS transition, transition the issue to done or comment that
+   it recovered. Tickets that never close are how a queue stops being read.
+
+This is the same transition-based rule as the Slack channel, with the extra
+requirement that the open issue itself acts as the state.
+
+**Make Jira a channel, not a special case.** It slots into the existing severity
+map rather than becoming separate machinery:
+
+```yaml
+defaults:
+  channel_map:
+    high:   [pagerduty, slack, jira]
+    medium: [slack, jira]
+    low:    [slack]
+```
+
+**Carry the evidence in the issue body**, so triage does not start with a
+question: table name, business date, last commit time, how far past SLA, records
+added on the last commit, the upstream DAG identifier, and a deep link to that
+run in their Airflow user interface.
+
+**Routes, in rough order of directness:**
+
+| Route | Notes |
+|---|---|
+| Your checker calls the Jira REST API directly | Most control, and the deduplication logic lives with the check that knows the state |
+| Datadog monitor to Jira | Native integration; an issue template handle such as `@jira-<template>` on the monitor creates the issue on trigger. Case Management adds two-way sync through a Jira webhook, and Jira Service Management syncs acknowledge and close back to Datadog |
+| Workato or Zapier Jira connector | Reasonable when the checker already reports into one of them, but you still own the deduplication |
+
+**Two ticket types worth separating.** An incident issue says data is late right
+now and needs action today. A debt issue says this pipeline missed its SLA
+fourteen times this quarter and belongs in the producing team's backlog. The
+second one is what actually changes behaviour, and it is fed by the trend data
+from Option 4 and the scorecard, not by any single failure.
+
+---
+
 ## What to ask for, ranked by size of ask
 
 1. **Confirm whether Airflow metrics already flow somewhere.** Airflow emits
    StatsD and OpenTelemetry (OTel) metrics natively, covering task failures, DAG
    run duration, and scheduling delay. If the platform team already ships these
    to Datadog or Grafana, you may need a dashboard and an alert rule, nothing
-   more. Check this first; it is the cheapest possible win.
-2. **A read-only API credential**, or `mwaa:InvokeRestApi` if it is MWAA.
-3. **A written per-application delivery SLA**: "table X is complete for business
+   more. Check this first; it is the cheapest possible win (Option 3b).
+2. **Whether the MWAA webserver is public or private**, which determines whether
+   any externally hosted tool can reach the API at all (Option 3).
+3. **A read-only API credential**, or `airflow:InvokeRestApi` if it is MWAA.
+4. **A written per-application delivery SLA**: "table X is complete for business
    date D by HH:MM." This costs them nothing and is what makes every threshold
    above defensible instead of guessed.
-4. **The completion watermark table** (Option 2).
-5. **DagRun export** to a shared schema (Option 4), for trends.
-6. **OpenLineage emission** from Spark and Airflow to a shared collector
+5. **The completion watermark table** (Option 2).
+6. **DagRun export** to a shared schema (Option 4), for trends.
+7. **OpenLineage emission** from Spark and Airflow to a shared collector
    (Option 6).
 
 ---
@@ -332,3 +449,18 @@ right now" badly.
 Airflow and the producer publishes outlets. Here the equivalent is the watermark
 table or an SQS message, both of which give you the same event semantics without
 requiring you to run an Airflow instance for dbt you orchestrate elsewhere.
+
+**Can an integration platform poll DAG status?** Workato can, including into a
+private VPC through its on-prem agent. Zapier has no path into a private
+webserver. Either way this is triage, not detection (Option 3).
+
+**Can a callback be embedded in the producing DAG instead?** Yes, and a webhook
+in their `on_success_callback` and `on_failure_callback` avoids the
+authentication and network problems entirely. Two caveats: it is a change in
+their repository, which is the same size of ask as the watermark table for less
+return, and a fire-and-forget webhook cannot report a run that never happened, so
+it still needs a deadman timer on the consumer side.
+
+**Should the consumer raise its own ticket?** Yes. Ticket from your own graded
+check rather than from their alert, deduplicate on a deterministic key because
+Jira has no idempotent create, and close on recovery.
