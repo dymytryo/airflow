@@ -2,6 +2,13 @@
 
 A DAG that extracts Airflow `DagRun` metadata and writes it to Redshift so historical run logs are easily queryable and analyzable in the data lake.
 
+This is the MWAA implementation, where the metadata database sits in an
+AWS-owned account and the only way in is Airflow's own session. On self-managed
+Airflow the metastore can be replicated continuously instead; see
+[`../eks_metastore_cdc/`](../eks_metastore_cdc/).
+
+![DAG run dashboard built on the exported metadata](dagrun_dashboard.png)
+
 ---
 
 ## Table of Contents
