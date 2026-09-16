@@ -22,7 +22,10 @@ This repository contains several Airflow DAG projects maintained by the Analytic
 6. **MWAA dbt Utilities**  
    Custom operators for running dbt in ECS/Fargate from AWS MWAA with a local Docker fallback, a generic MWAA CLI trigger operator, and debug DAGs for Secrets Manager, container runtime state, worker environment, Snowflake, and Starburst connectivity. See [`mwaa_dbt_utilities/`](mwaa_dbt_utilities/).
 
-7. **Monitoring Upstream Airflow Pipelines**  
+7. **Hosting Airflow**  
+   The six components a deployment has to run, and how MWAA, self-hosted EKS, Cloud Composer, Astro, Fabric, and plain EC2 divide them up. Architecture, pros, and cons per option, with a decision table. See [`hosting/`](hosting/).
+
+8. **Monitoring Upstream Airflow Pipelines**  
    Options for a downstream consumer who depends on Airflow pipelines owned by another team: Iceberg snapshot metadata checks, producer-published completion watermarks, REST API polling, DagRun export, cross-instance notification, and OpenLineage, with a config-driven registry design and the trade-offs of each. See [`upstream_monitoring/`](upstream_monitoring/).
    
 ## Directory Structure
