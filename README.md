@@ -10,23 +10,20 @@ This repository contains several Airflow DAG projects maintained by the Analytic
 2. **Payment Volume Pacing DAG**  
    Runs daily to project end-of-month payment volumes per method based on business-day pacing logic, writes results to Redshift, and powers a live Tableau dashboard for operational decision-making.
 
-3. **Airflow DagRun Export DAG**  
-   Exports recent `DagRun` metadata from the Airflow metastore into Redshift tables, enabling easy historical query and SLA monitoring beyond the limitations of Airflow’s native metastore.
-
-4. **DBT Drop Redshift View or Table DAG**  
+3. **DBT Drop Redshift View or Table DAG**  
    A manual-triggered DAG that drops specified Redshift tables or views via runtime config, allowing analytics engineers to manage schema cleanup without needing direct console access.
 
-5. **Self-Healing Critical Pipelines**  
+4. **Self-Healing Critical Pipelines**  
    Closed-loop reliability for critical dbt models: a lineage builder maintains a control table of staleness and priority, and an hourly healer rebuilds only stale P0/P1 models with guardrails (per-cycle cap, dry run, blocked-by-source detection, auditable state table) and traffic-light Slack alerts. See [`self_healing_pipelines/`](self_healing_pipelines/).
 
-6. **MWAA dbt Utilities**  
+5. **MWAA dbt Utilities**  
    Custom operators for running dbt in ECS/Fargate from AWS MWAA with a local Docker fallback, a generic MWAA CLI trigger operator, and debug DAGs for Secrets Manager, container runtime state, worker environment, Snowflake, and Starburst connectivity. See [`mwaa_dbt_utilities/`](mwaa_dbt_utilities/).
 
-7. **Hosting Airflow**  
+6. **Hosting Airflow**  
    The six components a deployment has to run, and how MWAA, self-hosted EKS, Cloud Composer, Astro, Fabric, and plain EC2 divide them up. Architecture, pros, and cons per option, with a decision table. See [`hosting/`](hosting/).
 
-8. **Monitoring Upstream Airflow Pipelines**  
-   Options for a downstream consumer who depends on Airflow pipelines owned by another team: Iceberg snapshot metadata checks, producer-published completion watermarks, REST API polling, DagRun export, cross-instance notification, and OpenLineage, with a config-driven registry design and the trade-offs of each. See [`upstream_monitoring/`](upstream_monitoring/).
+7. **Airflow Observability**  
+   Monitoring Airflow itself: the job-plane and data-plane signals, the full option set, and two run-history implementations, one exporting `DagRun` metadata on MWAA and one replicating a self-managed metastore by change data capture. Includes monitoring pipelines owned by another team. See [`observability/`](observability/).
    
 ## Directory Structure
 

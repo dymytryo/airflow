@@ -214,7 +214,7 @@ which executor the producing team runs before designing around a specific metric
 
 ## Option 4: DagRun metadata export to a shared table
 
-The pattern in [`medata_export/`](../medata_export/): pull `DagRun`
+The pattern in [`mwaa_dagrun_export/`](mwaa_dagrun_export/): pull `DagRun`
 records from the metastore and land them in the warehouse.
 
 Assessment:
