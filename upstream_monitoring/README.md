@@ -28,7 +28,7 @@ use the job plane for triage.
 |---|---|---|
 | **Primary detection** | Iceberg snapshot metadata checks (freshness + volume) from a YAML registry, gating your dbt build | No |
 | **Contract** | Ask the producers to publish a completion watermark table, one row per application per business date | Yes, small |
-| **Triage** | Read-only Airflow API credential, used when a check fails, not for alerting | Yes, near zero |
+| **Disambiguation** | Read-only Airflow API credential, to tell a running pipeline from a failed one and a quiet table from a broken one | Yes, near zero |
 | **Routing** | Zapier or Slack webhook delivers the message your checker produces | No |
 | **Ticketing** | Your checker raises its own Jira issue, deduplicated by a deterministic key and closed on recovery | No |
 | **Longer term** | OpenLineage collector covering their Spark, their Airflow, and your dbt | Yes, medium |
@@ -59,8 +59,10 @@ select
 from lakehouse_prod.app_billing.invoices.snapshots
 ```
 
-Freshness and volume together, which catches the empty-commit case that a job
-success signal misses:
+Freshness and volume together, which catches a commit that landed but carried
+nothing. Read "The empty batch problem" before setting a row-count floor: an
+empty batch is sometimes the correct outcome, and a fixed floor turns every quiet
+weekend into a page.
 
 ```sql
 select
@@ -312,16 +314,17 @@ defaults:
     high: [pagerduty, slack]
     medium: [slack]
 
-applications:
+pipelines:
   - application: billing
     upstream_dag_id: cdc-replay-billing
     owner_slack: "#billing-data"
     priority: P1
     cadence: hourly
+    expected_by: "06:00"
+    commits_when_empty: true      # verified, see "The empty batch problem"
     tables:
       - name: app_billing.invoices
         sla_minutes: 90
-        min_records_per_day: 50000
       - name: app_billing.payments
         sla_minutes: 90
 
@@ -330,26 +333,153 @@ applications:
     owner_slack: "#fleet-data"
     priority: P2
     cadence: daily
+    expected_by: "04:30"
+    commits_when_empty: false
     tables:
       - name: app_fleet.site_daily
         sla_minutes: 240
-        min_records_per_day: 10000
 ```
 
-**2. Generic checker.** Loop the registry, query `<table>.snapshots` once per
-entry, grade against `sla_minutes` and `min_records_per_day`, write one row per
-table per run to a results table. No per-application code.
+The unit of the registry is the pipeline, not the table, because the unit of work
+upstream is the DAG. One replay DAG owning fifteen tables is one thing to poll,
+one readiness decision, and one alert, rather than fifteen of each. At a hundred
+tables this is the difference between ten API calls and a hundred.
 
-**3. Transition-based alerting.** Alert on state change only, PASS to FAIL and
-FAIL back to PASS. Re-alerting every cycle is how a channel gets muted, and a
-muted channel is worse than no channel.
+**2. Two-tier checker.** Poll the cheap signal, fan out to the expensive one:
 
-**4. Gate, then run.** The checker runs before your dbt trigger. On failure it
+1. One batch call for DAG run states across the fleet. The REST API accepts a
+   wildcard in place of `dag_id` and has a batch list form taking multiple DAG
+   identifiers, so this stays one request as the registry grows.
+2. On a transition to success, query `<table>.snapshots` for that pipeline's
+   tables only.
+3. Independently, on a slower cycle, sweep snapshots for every registered table
+   regardless of job state.
+
+Step 3 is not redundant. It is what keeps the design working when the API
+credential expires, the DAG is renamed, or the webserver goes private. Job-plane
+polling should make you faster, never be the thing you depend on.
+
+**3. Let the data plane decide READY.** The two signals combine into a state
+model, and the direction of the dependency matters:
+
+| State | Job plane | Data plane | Action |
+|---|---|---|---|
+| `READY` | any, including unknown | qualifying commit present | Build |
+| `RUNNING` | run in progress | no commit yet | Wait |
+| `UPSTREAM_FAILED` | run failed | no commit | Alert, do not wait |
+| `LATE` | no run, past `expected_by` | no commit | Alert |
+| `DELIVERY_ERROR` | run succeeded | no qualifying commit followed | Alert, this is the interesting one |
+| `WAITING` | no run, before `expected_by` | no commit | Do nothing |
+
+`READY` is decided by the data plane alone. If the table holds a qualifying
+commit for the business date, you can build, whatever Airflow says and whether or
+not you can reach it. The job plane refines the reasons for *not* ready, which is
+what turns a single unhelpful "stale" into wait, alert, or escalate.
+
+Inverting this is tempting and wrong. If job success is the gate and the data
+check is only verification, then losing API access blocks a build whose data
+arrived perfectly.
+
+**4. Transition-based alerting.** Alert on state change only, and treat the state
+above as the state, not just pass and fail. Re-alerting every cycle is how a
+channel gets muted, and a muted channel is worse than no channel.
+
+**5. Gate, then run.** The checker runs before your dbt trigger. On failure it
 stops the build and posts the reason. Zapier delivers the message; it does not
 detect the condition.
 
-**5. Scorecard.** Daily grade per application. This is the artifact that makes
+**6. Scorecard.** Daily grade per application. This is the artifact that makes
 the conversation with the producing team factual rather than anecdotal.
+
+---
+
+## The empty batch problem
+
+A change data capture (CDC) replay runs, the source genuinely had no changes in
+that window, and zero rows land. The job succeeds and the table is correct and
+current. A freshness check on `max(committed_at)` fails anyway, because nothing
+committed.
+
+This is the case that breaks naive freshness monitoring, and it is why a fixed
+row-count floor such as `min_records_per_day: 50000` is a false-positive
+generator. It will fire every weekend, every holiday, and permanently for any
+low-volume application.
+
+The underlying issue is that two different questions get collapsed into one:
+
+- **Was the table processed?** Did the pipeline consider this table in this cycle.
+- **Was the table changed?** Did any rows actually move.
+
+`max(committed_at)` answers the second. Freshness monitoring needs the first.
+
+### First, find out empirically whether their writer commits on empty
+
+Some writers commit unconditionally, producing a snapshot with `added-records`
+of zero. Those are a processing heartbeat and freshness works normally. Others
+skip the commit entirely when there is nothing to write, and then commit time is
+a change signal that cannot carry an SLA. Which one you are dealing with is a
+property of their job, not something to assume:
+
+```sql
+select
+    date(committed_at)                                   as commit_date,
+    count(*)                                             as commits,
+    sum(case
+            when cast(summary['added-records'] as bigint) = 0
+            then 1 else 0
+        end)                                             as empty_commits
+from lakehouse_prod.app_billing.invoices.snapshots
+where committed_at >= current_timestamp - interval 30 days
+group by 1
+order by 1
+```
+
+Empty commits present means the table has a heartbeat, so record it as
+`commits_when_empty: true` and carry on. Absent means you need one of the
+following.
+
+### If they do not commit on empty
+
+**This is where the job plane stops being optional.** With no commit and no run
+status, a quiet table and a broken pipeline are indistinguishable until the SLA
+expires. DAG success is the only thing that separates them, which makes the
+read-only API credential or the watermark table a requirement rather than a
+convenience for these applications.
+
+Ranked:
+
+1. **The watermark table** (Option 2) states "billing processed 2026-09-14, 0
+   records" and ends the ambiguity outright. For low-volume applications this is
+   the single most valuable thing to ask the producing team for.
+2. **DAG run success** (Option 3) as the processed-marker, with the snapshot
+   check confirming rows when rows were expected.
+3. **Ask them to commit unconditionally.** Sometimes a one-line change in their
+   writer, and it gives every consumer a heartbeat for free.
+
+### Replace fixed floors with relative expectations
+
+For tables that do move regularly, a static threshold is still the wrong shape.
+Better, in increasing order of effort:
+
+- **Compare against the table's own history.** Alert when the gap since the last
+  commit exceeds a high percentile of the trailing thirty day gap distribution.
+  This calibrates itself per table and needs no hand-set SLA, which is what makes
+  it survive a hundred tables.
+- **Match the weekday.** Compare volume against the trailing median for the same
+  day of week, so Sunday is judged against Sundays.
+- **Alert on a band, not a floor.** A tenfold spike is as much a delivery defect
+  as a shortfall, and a full reload landing where an increment was expected is a
+  common and expensive one.
+- **Count consecutive empties.** One empty cycle is unremarkable. Five in a row
+  for a table whose historical maximum is one is a broken source, even though no
+  individual cycle looked wrong.
+
+The last of these catches the failure mode nothing else does: a source that
+quietly stopped producing, where every single check passes on its own terms.
+
+Volume anomaly detection of this kind is what packaged tooling such as Elementary
+already implements, which is a reasonable argument for configuring it rather than
+building the statistics yourself.
 
 ---
 
