@@ -24,6 +24,9 @@ This repository contains several Airflow DAG projects maintained by the Analytic
 
 7. **Airflow Observability**  
    Monitoring Airflow itself: the job-plane and data-plane signals, the full option set, and two run-history implementations, one exporting `DagRun` metadata on MWAA and one replicating a self-managed metastore by change data capture. Includes monitoring pipelines owned by another team. See [`observability/`](observability/).
+
+8. **Redshift Query Guardrail**  
+   A scheduled DAG that cancels Redshift queries past a configured runtime threshold, bounding the damage a runaway query can do to warehouse capacity without handing out console access. See [`redshift_query_guardrail/`](redshift_query_guardrail/).
    
 ## Directory Structure
 
@@ -40,6 +43,9 @@ This repository contains several Airflow DAG projects maintained by the Analytic
 │   └── README.md
 ├── drop_redshift/
 │   └── dbt_drop_redshift.py
+│   └── README.md
+├── redshift_query_guardrail/
+│   └── redshift_hanging_queries.py
 │   └── README.md
 ├── misc/
 │   └── task_delay.py
