@@ -17,8 +17,12 @@ is also not proof of data: a change data capture (CDC) replay can exit zero
 having written an empty commit. You need a positive assertion that data for date
 D arrived, not the absence of a complaint.
 
-That single fact decides the architecture: build detection on the data plane,
-use the job plane for triage.
+That single fact decides the architecture: build detection on the data plane and
+use the job plane for triage. There is one explicit exception. If a verified
+writer does not create a snapshot for an empty cycle, a recent table-specific
+Airflow success can serve as the processed marker, but only while the table's
+catalog-linked database (CLD) refresh is healthy. It does not override a stopped,
+stalled, or backlogged CLD refresh.
 
 ---
 
@@ -37,6 +41,9 @@ use the job plane for triage.
 Start with the primary layer. It is the only option that works on day one, keeps
 working when their team reorganizes, and measures the thing you actually care
 about.
+
+The reusable dbt implementation for the no-change exception lives in
+[`dbt_source_readiness/`](dbt_source_readiness/).
 
 ---
 
@@ -365,6 +372,7 @@ model, and the direction of the dependency matters:
 | State | Job plane | Data plane | Action |
 |---|---|---|---|
 | `READY` | any, including unknown | qualifying commit present | Build |
+| `READY_NO_CHANGE` | mapped table task succeeded | no new snapshot; CLD refresh healthy and the writer is known not to commit on empty | Build and record a no-change cycle |
 | `RUNNING` | run in progress | no commit yet | Wait |
 | `UPSTREAM_FAILED` | run failed | no commit | Alert, do not wait |
 | `LATE` | no run, past `expected_by` | no commit | Alert |
@@ -373,8 +381,11 @@ model, and the direction of the dependency matters:
 
 `READY` is decided by the data plane alone. If the table holds a qualifying
 commit for the business date, you can build, whatever Airflow says and whether or
-not you can reach it. The job plane refines the reasons for *not* ready, which is
-what turns a single unhelpful "stale" into wait, alert, or escalate.
+not you can reach it. `READY_NO_CHANGE` is narrower: use it only for a table that
+is known not to commit on empty, only from its mapped validation task, and only
+when CLD refresh is healthy with no snapshot backlog. In all other cases the job
+plane refines the reasons for *not* ready, which turns a single unhelpful "stale"
+into wait, alert, or escalate.
 
 Inverting this is tempting and wrong. If job success is the gate and the data
 check is only verification, then losing API access blocks a build whose data
