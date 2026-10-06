@@ -14,10 +14,9 @@ scheduled sends no failure notification at all. Absence of an alert is not proof
 of success, so anything that matters needs a positive signal, not silence.
 
 For catalog-linked Iceberg tables that do not create a snapshot on an empty
-cycle, [`dbt_source_readiness/`](dbt_source_readiness/) combines the two signals
-without collapsing their meaning: CLD refresh must be healthy, then either a
-recent snapshot or a recent table-specific Airflow validation success establishes
-readiness.
+cycle, [`dbt_source_readiness/`](dbt_source_readiness/) exposes CLD refresh health
+and Airflow task freshness as two independent dbt tests. Neither test reads the
+other; the observability state model combines their results downstream.
 
 ## Options
 
