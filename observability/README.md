@@ -13,6 +13,12 @@ A job can succeed and produce nothing, and a DAG that is paused or never
 scheduled sends no failure notification at all. Absence of an alert is not proof
 of success, so anything that matters needs a positive signal, not silence.
 
+For catalog-linked Iceberg tables that do not create a snapshot on an empty
+cycle, [`dbt_source_readiness/`](dbt_source_readiness/) combines the two signals
+without collapsing their meaning: CLD refresh must be healthy, then either a
+recent snapshot or a recent table-specific Airflow validation success establishes
+readiness.
+
 ## Options
 
 | Option | Signal | Latency | Needs |
@@ -33,9 +39,10 @@ problem, the config-driven registry, and alert and ticket routing, see
 
 ## Implementations
 
-Both land Airflow run history in the warehouse so it can be queried, trended,
-and joined to data-plane checks. Which one applies depends on how Airflow is
-hosted, because that determines whether you can reach the metastore directly.
+The two run-history implementations land Airflow metadata in the warehouse so
+it can be queried, trended, and joined to data-plane checks. Which one applies
+depends on how Airflow is hosted, because that determines whether you can reach
+the metastore directly.
 
 | | [`mwaa_dagrun_export/`](mwaa_dagrun_export/) | [`eks_metastore_cdc/`](eks_metastore_cdc/) |
 |---|---|---|
