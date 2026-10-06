@@ -42,8 +42,9 @@ Start with the primary layer. It is the only option that works on day one, keeps
 working when their team reorganizes, and measures the thing you actually care
 about.
 
-The reusable dbt implementation for the no-change exception lives in
-[`dbt_source_readiness/`](dbt_source_readiness/).
+The reusable dbt signal checks live in
+[`dbt_source_readiness/`](dbt_source_readiness/). CLD refresh health and Airflow
+task freshness are separate tests; the readiness model consumes their results.
 
 ---
 
@@ -386,6 +387,11 @@ is known not to commit on empty, only from its mapped validation task, and only
 when CLD refresh is healthy with no snapshot backlog. In all other cases the job
 plane refines the reasons for *not* ready, which turns a single unhelpful "stale"
 into wait, alert, or escalate.
+
+Keep the checks loosely coupled. One dbt test emits CLD refresh health and one
+emits Airflow task freshness. The model that stores those results derives
+`READY_NO_CHANGE`; neither test reaches across the boundary to query or interpret
+the other signal.
 
 Inverting this is tempting and wrong. If job success is the gate and the data
 check is only verification, then losing API access blocks a build whose data

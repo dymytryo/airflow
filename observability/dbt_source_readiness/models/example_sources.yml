@@ -13,30 +13,41 @@ sources:
     tables:
       - name: payment_events
         data_tests:
-          - cld_airflow_source_readiness:
+          - cld_table_refresh_health:
+              arguments:
+                max_pending_snapshots: 0
+              config:
+                severity: error
+                store_failures: true
+
+          - airflow_task_freshness:
               arguments:
                 airflow_relation: source('orchestration_observability', 'task_instance')
                 validate_task_id: validate_payments_payment_events
                 dag_ids:
                   - replay_payments_hourly
                   - replay_payments_daily
-                max_snapshot_age_hours: 26
                 max_success_age_hours: 26
                 lookback_hours: 72
-                max_pending_snapshots: 0
               config:
                 severity: error
                 store_failures: true
 
       - name: settlement_status
         data_tests:
-          - cld_airflow_source_readiness:
+          - cld_table_refresh_health:
+              arguments:
+                max_pending_snapshots: 0
+              config:
+                severity: error
+                store_failures: true
+
+          - airflow_task_freshness:
               arguments:
                 airflow_relation: source('orchestration_observability', 'task_instance')
                 validate_task_id: validate_payments_settlement_status
                 dag_ids:
                   - replay_payments_daily
-                max_snapshot_age_hours: 26
                 max_success_age_hours: 26
               config:
                 severity: error
