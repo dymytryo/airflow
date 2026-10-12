@@ -13,7 +13,12 @@ sources:
     tables:
       - name: payment_events
         data_tests:
-          - cld_table_refresh_health:
+          - cld_catalog_link_status:
+              config:
+                severity: error
+                store_failures: true
+
+          - iceberg_auto_refresh_status:
               arguments:
                 max_pending_snapshots: 0
               config:
@@ -35,7 +40,12 @@ sources:
 
       - name: settlement_status
         data_tests:
-          - cld_table_refresh_health:
+          - cld_catalog_link_status:
+              config:
+                severity: error
+                store_failures: true
+
+          - iceberg_auto_refresh_status:
               arguments:
                 max_pending_snapshots: 0
               config:

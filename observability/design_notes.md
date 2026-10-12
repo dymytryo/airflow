@@ -21,8 +21,8 @@ That single fact decides the architecture: build detection on the data plane and
 use the job plane for triage. There is one explicit exception. If a verified
 writer does not create a snapshot for an empty cycle, a recent table-specific
 Airflow success can serve as the processed marker, but only while the table's
-catalog-linked database (CLD) refresh is healthy. It does not override a stopped,
-stalled, or backlogged CLD refresh.
+catalog-linked database (CLD) link and per-table auto-refresh pipe are healthy.
+It does not override a stopped, stalled, or backlogged refresh.
 
 ---
 
@@ -43,8 +43,9 @@ working when their team reorganizes, and measures the thing you actually care
 about.
 
 The reusable dbt signal checks live in
-[`dbt_source_readiness/`](dbt_source_readiness/). CLD refresh health and Airflow
-task freshness are separate tests; the readiness model consumes their results.
+[`dbt_source_readiness/`](dbt_source_readiness/). CLD link health, Iceberg table
+auto-refresh, and Airflow task freshness are separate tests; the readiness model
+consumes their results.
 
 ---
 
@@ -373,7 +374,7 @@ model, and the direction of the dependency matters:
 | State | Job plane | Data plane | Action |
 |---|---|---|---|
 | `READY` | any, including unknown | qualifying commit present | Build |
-| `READY_NO_CHANGE` | mapped table task succeeded | no new snapshot; CLD refresh healthy and the writer is known not to commit on empty | Build and record a no-change cycle |
+| `READY_NO_CHANGE` | mapped table task succeeded | no new snapshot; CLD link and table auto-refresh healthy, and the writer is known not to commit on empty | Build and record a no-change cycle |
 | `RUNNING` | run in progress | no commit yet | Wait |
 | `UPSTREAM_FAILED` | run failed | no commit | Alert, do not wait |
 | `LATE` | no run, past `expected_by` | no commit | Alert |
@@ -384,14 +385,14 @@ model, and the direction of the dependency matters:
 commit for the business date, you can build, whatever Airflow says and whether or
 not you can reach it. `READY_NO_CHANGE` is narrower: use it only for a table that
 is known not to commit on empty, only from its mapped validation task, and only
-when CLD refresh is healthy with no snapshot backlog. In all other cases the job
-plane refines the reasons for *not* ready, which turns a single unhelpful "stale"
-into wait, alert, or escalate.
+when the CLD link and table auto-refresh pipe are healthy with no snapshot
+backlog. In all other cases the job plane refines the reasons for *not* ready,
+which turns a single unhelpful "stale" into wait, alert, or escalate.
 
-Keep the checks loosely coupled. One dbt test emits CLD refresh health and one
-emits Airflow task freshness. The model that stores those results derives
-`READY_NO_CHANGE`; neither test reaches across the boundary to query or interpret
-the other signal.
+Keep the checks loosely coupled. Separate dbt tests emit CLD link health, table
+auto-refresh health, and Airflow task freshness. The model that stores those
+results derives `READY_NO_CHANGE`; no test reaches across the boundary to query
+or interpret another signal.
 
 Inverting this is tempting and wrong. If job success is the gate and the data
 check is only verification, then losing API access blocks a build whose data

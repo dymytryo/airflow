@@ -14,9 +14,10 @@ scheduled sends no failure notification at all. Absence of an alert is not proof
 of success, so anything that matters needs a positive signal, not silence.
 
 For catalog-linked Iceberg tables that do not create a snapshot on an empty
-cycle, [`dbt_source_readiness/`](dbt_source_readiness/) exposes CLD refresh health
-and Airflow task freshness as two independent dbt tests. Neither test reads the
-other; the observability state model combines their results downstream.
+cycle, [`dbt_source_readiness/`](dbt_source_readiness/) exposes catalog-link
+health, per-table Iceberg auto-refresh, and Airflow task freshness as three
+independent dbt tests. The observability state model combines their results
+downstream.
 
 ## Options
 
@@ -27,6 +28,8 @@ other; the observability state model combines their results downstream.
 | StatsD metrics to Datadog or Grafana | Job | Near real time | Agent already collecting; evaluates no-data natively |
 | `on_failure_callback` to Slack, Jira, or a webhook | Job | Immediate | A change in the DAG; reports failures only, never absence |
 | Deadline alerts | Job | At the deadline | Airflow 3.1+; the Airflow 2 SLA mechanism was removed in 3.0 and was unreliable before that |
+| CLD catalog-link status | Data | Catalog discovery interval | `MONITOR` on the catalog-linked database |
+| Iceberg table auto-refresh status | Data | Table refresh interval | `OWNERSHIP` on the Iceberg table |
 | Iceberg snapshot metadata checks | Data | Your schedule | Table read access only |
 | `dbt source freshness` | Data | Your schedule | dbt, with `loaded_at_query` for metadata-based checks |
 | Producer-published watermark table | Data | Immediate | A final task in the producing DAG |
