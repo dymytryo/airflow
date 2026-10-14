@@ -8,12 +8,13 @@ sources:
       - name: task_instance
 
   - name: payments
-    database: PAYMENTS_PROD
-    schema: RAW
+    database: ICEBERG_PROD
+    schema: PAYMENTS
     tables:
       - name: payment_events
+        identifier: PAYMENT_EVENTS
         data_tests:
-          # Register the PAYMENTS_PROD CLD check once. The remaining tables in
+          # Register the ICEBERG_PROD CLD check once. The remaining tables in
           # this CLD receive only the two table-level checks.
           - cld_catalog_link_status:
               config:
@@ -34,6 +35,7 @@ sources:
                 dag_ids:
                   - replay_payments_hourly
                   - replay_payments_daily
+                validate_map_index: -1
                 max_success_age_hours: 26
                 lookback_hours: 72
               config:
@@ -41,6 +43,7 @@ sources:
                 store_failures: true
 
       - name: settlement_status
+        identifier: SETTLEMENT_STATUS
         data_tests:
           - iceberg_auto_refresh_status:
               arguments:
@@ -55,6 +58,7 @@ sources:
                 validate_task_id: validate_payments_settlement_status
                 dag_ids:
                   - replay_payments_daily
+                validate_map_index: -1
                 max_success_age_hours: 26
               config:
                 severity: error
