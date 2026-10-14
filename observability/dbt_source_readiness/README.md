@@ -7,7 +7,7 @@ the source.
 
 | Test | Plane and scope | Signal read | Pass condition | Failure isolated |
 |---|---|---|---|---|
-| `cld_catalog_link_status` | Data plane, one catalog-linked database (CLD) | `SYSTEM$CATALOG_LINK_STATUS` for the source database | The discovery pipe is `RUNNING` and `failureDetails` is empty | The CLD cannot connect to the external catalog, discover an entity, or complete a supported link operation |
+| `cld_catalog_link_status` | Data plane, one Snowflake catalog-linked database (CLD) | `SYSTEM$CATALOG_LINK_STATUS` for the CLD object; there is no namespace argument | The CLD discovery pipe is `RUNNING` and `failureDetails` is empty across its configured namespace scope | The CLD cannot connect to the external catalog, discover an entity, or complete a supported link operation |
 | `iceberg_auto_refresh_status` | Data plane, one externally managed Iceberg table | `SYSTEM$AUTO_REFRESH_STATUS` for the fully qualified table | The table refresh pipe is `RUNNING`, has no execution error, and has no more than the allowed pending snapshots | The table-specific refresh is unavailable, stalled, stopped, invalid, or backlogged even though the CLD can still be healthy |
 | `airflow_task_freshness` | Job plane, one table-specific task across its allowed DAGs | Exported Airflow task-instance history, deduplicated to the highest `try_number` for each run | The latest task state is `success`, and its most recent successful `start_date` is within `max_success_age_hours` | No task ran in the lookback window, the latest task failed, no successful task exists, or the latest success is stale |
 
@@ -31,7 +31,7 @@ retain their results independently.
 The following statements inspect the same source configured in
 [`example_sources.yml`](models/example_sources.yml):
 
-- CLD: `PAYMENTS_PROD`
+- Snowflake CLD database: `PAYMENTS_PROD`
 - Iceberg table: `PAYMENTS_PROD.RAW.PAYMENT_EVENTS`
 - Airflow history: `OBSERVABILITY_PROD.AIRFLOW.TASK_INSTANCE`
 - Mapped task: `validate_payments_payment_events`
@@ -45,8 +45,12 @@ as generic tests.
 
 ### 1. Check the CLD discovery pipe
 
-This is the database-wide prerequisite for the example table. It does not prove
-that the table's own auto-refresh pipe is healthy.
+This is the CLD-wide prerequisite for the example table. `PAYMENTS_PROD` is the
+Snowflake CLD object, not a remote catalog namespace. The function has no
+namespace argument: it evaluates the link across the namespaces configured on
+that CLD, and this check fails when `failureDetails` contains an error for any
+entity in that scope. It does not prove that the table's own auto-refresh pipe
+is healthy.
 
 ```sql
 with catalog_link_status as (
