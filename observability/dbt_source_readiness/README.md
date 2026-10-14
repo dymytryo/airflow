@@ -29,9 +29,9 @@ flowchart TB
 
 Airflow is a separate control plane. It has no Snowflake system function.
 
-| Control | Example mapping | Scope for 150 tables | Evidence and pass condition |
+| Control | Example mapping | Scope for `N` tables | Evidence and pass condition |
 |---|---|---|---|
-| Table delivery | DAGs `replay_payments_hourly` and `replay_payments_daily`; task `validate_payments_payment_events` | One check per table-specific delivery task: 150 checks | The latest Airflow task instance state is `success`, and its successful `end_date` is no more than 26 hours old |
+| Table delivery | DAGs `replay_payments_hourly` and `replay_payments_daily`; task `validate_payments_payment_events` | One check per table-specific delivery task: `N` checks | The latest Airflow task instance state is `success`, and its successful `end_date` is no more than 26 hours old |
 
 ## Part 2: Snowflake Iceberg health
 
@@ -39,12 +39,12 @@ Snowflake exposes two system functions for the Iceberg side. `ICEBERG_PROD` is
 the Snowflake CLD database object passed to `SYSTEM$CATALOG_LINK_STATUS`;
 `PAYMENTS` is a schema, not an argument to that function.
 
-| Layer | Native Snowflake function | Exact example statement | Scope for 150 tables in one CLD | Healthy result |
+| Layer | Native Snowflake function | Exact example statement | Scope for `N` tables in one CLD | Healthy result |
 |---|---|---|---|---|
 | 2. CLD link | `SYSTEM$CATALOG_LINK_STATUS` | `SELECT SYSTEM$CATALOG_LINK_STATUS('ICEBERG_PROD');` | Run once for the CLD | The returned JSON has `executionState = RUNNING` and an empty `failureDetails` array |
-| 3. Table auto-refresh | `SYSTEM$AUTO_REFRESH_STATUS` | `SELECT SYSTEM$AUTO_REFRESH_STATUS('ICEBERG_PROD.PAYMENTS.PAYMENT_EVENTS');` | Run once for each table: 150 calls with 150 different table names | The returned JSON has `executionState = RUNNING`, no `invalidExecutionStateReason`, and an acceptable `pendingSnapshotCount` |
+| 3. Table auto-refresh | `SYSTEM$AUTO_REFRESH_STATUS` | `SELECT SYSTEM$AUTO_REFRESH_STATUS('ICEBERG_PROD.PAYMENTS.PAYMENT_EVENTS');` | Run once for each table: `N` calls with `N` different table names | The returned JSON has `executionState = RUNNING`, no `invalidExecutionStateReason`, and an acceptable `pendingSnapshotCount` |
 
-For 150 tables sourced through one CLD, run one CLD function call and 150 table
+For `N` tables sourced through one CLD, run one CLD function call and `N` table
 function calls. The CLD function is not repeated per table.
 
 ## Access requirements
