@@ -1,6 +1,9 @@
 {#
   Checks only the Snowflake catalog-linked database discovery signal.
 
+  Instantiate this generic test once per CLD, using one source table as the
+  registration point. Attaching it to every table repeats the same CLD call.
+
   RUNNING does not guarantee that every entity synced, so failureDetails is
   graded separately. Per-table auto-refresh and Airflow are separate tests.
 #}

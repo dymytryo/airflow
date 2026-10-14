@@ -13,6 +13,8 @@ sources:
     tables:
       - name: payment_events
         data_tests:
+          # Register the PAYMENTS_PROD CLD check once. The remaining tables in
+          # this CLD receive only the two table-level checks.
           - cld_catalog_link_status:
               config:
                 severity: error
@@ -40,11 +42,6 @@ sources:
 
       - name: settlement_status
         data_tests:
-          - cld_catalog_link_status:
-              config:
-                severity: error
-                store_failures: true
-
           - iceberg_auto_refresh_status:
               arguments:
                 max_pending_snapshots: 0

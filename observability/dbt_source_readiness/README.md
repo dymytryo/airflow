@@ -5,16 +5,20 @@ snapshot, so snapshot age is not a reliable processing watermark. Three
 independent tests expose the database, table, and job signals needed to evaluate
 the source.
 
-| Test | Plane and scope | Signal read | Pass condition | Failure isolated |
-|---|---|---|---|---|
-| `cld_catalog_link_status` | Data plane, one Snowflake catalog-linked database (CLD) | `SYSTEM$CATALOG_LINK_STATUS` for the CLD object; there is no namespace argument | The CLD discovery pipe is `RUNNING` and `failureDetails` is empty across its configured namespace scope | The CLD cannot connect to the external catalog, discover an entity, or complete a supported link operation |
-| `iceberg_auto_refresh_status` | Data plane, one externally managed Iceberg table | `SYSTEM$AUTO_REFRESH_STATUS` for the fully qualified table | The table refresh pipe is `RUNNING`, has no execution error, and has no more than the allowed pending snapshots | The table-specific refresh is unavailable, stalled, stopped, invalid, or backlogged even though the CLD can still be healthy |
-| `airflow_task_freshness` | Job plane, one table-specific task across its allowed DAGs | Exported Airflow task-instance history, deduplicated to the highest `try_number` for each run | The latest task state is `success`, and its most recent successful `start_date` is within `max_success_age_hours` | No task ran in the lookback window, the latest task failed, no successful task exists, or the latest success is stale |
+| Test | Run once per | Plane and scope | Signal read | Pass condition | Failure isolated |
+|---|---|---|---|---|---|
+| `cld_catalog_link_status` | CLD per monitoring cycle | Data plane, one Snowflake catalog-linked database (CLD) | `SYSTEM$CATALOG_LINK_STATUS` for the CLD object; there is no namespace argument | The CLD discovery pipe is `RUNNING` and `failureDetails` is empty across its configured namespace scope | The CLD cannot connect to the external catalog, discover an entity, or complete a supported link operation |
+| `iceberg_auto_refresh_status` | Iceberg table | Data plane, one externally managed Iceberg table | `SYSTEM$AUTO_REFRESH_STATUS` for the fully qualified table | The table refresh pipe is `RUNNING`, has no execution error, and has no more than the allowed pending snapshots | The table-specific refresh is unavailable, stalled, stopped, invalid, or backlogged even though the CLD can still be healthy |
+| `airflow_task_freshness` | Table-to-task mapping | Job plane, one table-specific task across its allowed DAGs | Exported Airflow task-instance history, deduplicated to the highest `try_number` for each run | The latest task state is `success`, and its most recent successful `start_date` is within `max_success_age_hours` | No task ran in the lookback window, the latest task failed, no successful task exists, or the latest success is stale |
 
 No test reads or interprets another. A healthy catalog link does not prove that
 one table's auto-refresh pipe is running, and Airflow success does not prove that
-Snowflake applied the latest snapshot. Attach all three to a quiet source and
-retain their results independently.
+Snowflake applied the latest snapshot. Instantiate `cld_catalog_link_status`
+once per CLD. A dbt generic test must attach to a resource, so designate one
+source table as that CLD's registration point; the signal remains CLD-wide.
+Attach `iceberg_auto_refresh_status` and `airflow_task_freshness` to every quiet
+source table and retain all results independently. For 150 tables in one CLD,
+that is one CLD check, 150 table-refresh checks, and 150 task-freshness checks.
 
 ## Prerequisites
 
@@ -328,10 +332,13 @@ the corresponding table.
    [`iceberg_auto_refresh_status.sql`](tests/generic/iceberg_auto_refresh_status.sql),
    and [`airflow_task_freshness.sql`](tests/generic/airflow_task_freshness.sql)
    into the dbt project's `tests/generic/` directory.
-2. Adapt [`example_sources.yml`](models/example_sources.yml). Pass the Airflow
-   history relation, table-specific task identifier, allowed DAG identifiers,
-   success-age threshold, and allowed Iceberg snapshot backlog explicitly.
-3. Run and persist failures:
+2. For each CLD, designate one source table as the registration point for
+   `cld_catalog_link_status`. Do not repeat the CLD test on every table.
+3. Attach the other two tests to each quiet source table. Adapt
+   [`example_sources.yml`](models/example_sources.yml) with the Airflow history
+   relation, table-specific task identifier, allowed DAG identifiers,
+   success-age threshold, and allowed Iceberg snapshot backlog.
+4. Run and persist failures:
 
 ```bash
 dbt parse
@@ -347,7 +354,8 @@ Each test returns no rows when its own condition passes. Failures include
 
 ## Operational use
 
-Run all three tests before downstream source-dependent models. Retry a transient
+Run one CLD check per CLD and the two table-level checks for each source before
+downstream source-dependent models. Retry a transient
 `ICEBERG_AUTO_REFRESH_PENDING` result within the delivery window. For a stopped
 table-level pipe, follow
 [`iceberg_auto_refresh_recovery.md`](iceberg_auto_refresh_recovery.md). Persist
